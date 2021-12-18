@@ -1,0 +1,66 @@
+#include <DHT.h>
+#include <ESP8266WiFi.h>
+#include <Wire.h>
+#include "DHT.h"
+#define DHTPIN D2 
+#define SOIL_MOIST_1_PIN A0
+#define DHTTYPE DHT11  
+DHT dht(DHTPIN, DHTTYPE);
+#define DHTTYPE DHT11   // DHT 11
+float humi; 
+float temp;
+//WiFiSetting
+const char* ssid      = "Xuan3042";
+const char* password  = "1236547868";
+WiFiClient client;
+//ThingSpeakSetting
+const int channelID    = 1572829;
+String writeAPIKey    = "07LG4893UU2240JX";
+const char* server    = "api.thingspeak.com";
+//FunctionDeclare
+void    wifiSetup();
+void    thingConnect();
+void    readSensor(void);
+void    printData(void);
+void setup() {
+  Serial.begin(115200);
+  Serial.println("Start Reading Sensor!\n");
+  dht.begin();
+  wifiSetup();
+}
+void loop() {
+  thingConnect();
+  readSensor();
+  printData();
+}
+void wifiSetup() {
+  Serial.print("Connecting");
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print(".");
+    delay(100);
+  }
+  Serial.print("\r\nWiFi connected");
+}
+void thingConnect() {
+  if (client.connect(server, 80)) {
+    String body = "field1=" + String(temp, 1) + "&field2=" + String(humi, 1) ;
+    client.print("POST /update HTTP/1.1\n");
+    client.print("Host: api.thingspeak.com\n");
+    client.print("Connection: close\n");
+    client.print("X-THINGSPEAKAPIKEY: " + writeAPIKey + "\n");
+    client.print("Content-Type: application/x-www-form-urlencoded\n");
+    client.print("Content-Length: ");
+    client.print(body.length());
+    client.print("\n\n");
+    client.print(body);
+    client.print("\n\n");
+  }
+}
+void printData(void) {
+  Serial.printf("Temp: %s°C - Hum: %s% \r\n", String(temp, 1).c_str(), String(humi, 1).c_str());
+}
+void readSensor(void) {
+  temp  = dht.readTemperature();
+  humi  = dht.readHumidity();
+}
